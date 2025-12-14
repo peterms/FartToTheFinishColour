@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fart to the Finish: Final Edition</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', sans-serif;
+            background-color: #222;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            margin: 0;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* --- BOARD --- */
+        #game-area {
+            position: relative;
+            width: 350px; 
+            height: 900px; 
+            box-shadow: 0 0 25px #000;
+            background-color: #fff;
+            border-radius: 8px;
+        }
+
+        #board-image { width: 100%; height: 100%; object-fit: fill; border-radius: 8px; }
+
+        /* --- PIECES --- */
+        .token {
+            position: absolute; width: 65px; height: 65px;
+            transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 10; filter: drop-shadow(5px 8px 4px rgba(0,0,0,0.6));
+        }
+        #p2-token { z-index: 11; }
+        .item-token {
+            width: 55px; position: absolute; z-index: 5;
+            filter: drop-shadow(3px 3px 3px rgba(0,0,0,0.6)); display: none;
+        }
+
+        /* --- CONTROLS --- */
+        .sidebar {
+            background: #f0f0f0; padding: 20px; border-radius: 12px;
+            width: 320px; text-align: center; border: 4px solid #333;
+        }
+        #turn-indicator {
+            padding: 15px; color: white; font-weight: bold; border-radius: 8px;
+            margin-bottom: 15px; font-size: 20px;
+        }
+        .bg-p1 { background-color: #555; }
+        .bg-p2 { background-color: #76ff03; color: black !important; }
+        #dice-box { font-size: 80px; margin: 10px 0; }
+        button {
+            padding: 15px 40px; font-size: 20px; cursor: pointer;
+            background-color: #ff9800; border: 3px solid #e65100; 
+            color: white; border-radius: 10px; font-weight: bold;
+        }
+        button:disabled { background-color: #ccc; border-color: #999; cursor: not-allowed; }
+
+        #message-log {
+            margin-top: 20px; color: #d32f2f; font-weight: bold; 
+            min-height: 60px; font-size: 18px; background: #fff; padding: 10px;
+            border-radius: 5px; border: 1px solid #ccc;
+        }
+
+        /* --- SPINNER MODAL --- */
+        .modal {
+            display: none; position: fixed; z-index: 100; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: rgba(0,0,0,0.8);
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: transparent; padding: 0; 
+            text-align: center; position: relative;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        
+        .spinner-container {
+            width: 350px; height: 350px;
+            border-radius: 50%;
+            overflow: hidden; 
+            border: 5px solid white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+            background: white;
+        }
+
+        #spinner-img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transition: transform 3s cubic-bezier(0.1, 0.7, 0.1, 1);
+        }
+
+        .pointer-arrow {
+            width: 0; height: 0; 
+            border-left: 20px solid transparent; border-right: 20px solid transparent;
+            border-top: 30px solid #333;
+            position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+            z-index: 102; filter: drop-shadow(0 2px 2px black);
+        }
+
+        /* --- THE BOY POPUP --- */
+        #boy-popup {
+            display: none;
+            position: fixed;
+            bottom: -300px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200;
+            width: 300px;
+            transition: bottom 0.5s ease-out;
+            filter: drop-shadow(0 0 20px white);
+        }
+        #boy-popup.show {
+            bottom: 50px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-area">
+        <img src="new_board.jpg" id="board-image" onclick="getClickCoordinates(event)">
+        <img src="crowbar.png" class="token" id="p1-token">
+        <img src="fart.png" class="token" id="p2-token">
+        <img src="chest.png" class="item-token" id="chest-token">
+        <img src="shark.png" class="item-token" id="shark-token">
+    </div>
+
+    <div class="sidebar">
+        <h1>🏁 Fart to the Finish 🏁</h1>
+        <div id="turn-indicator" class="bg-p1">Player 1: Criminal</div>
+        <div id="dice-box">🎲</div>
+        <button onclick="rollDice()" id="roll-btn">ROLL</button>
+        <div id="message-log">Welcome!<br><small>Race down the left, up the right!</small></div>
+        <div style="display:flex; justify-content:space-around; margin-top:20px; font-weight:bold; font-size:18px;">
+            <div style="color:#555">🪙 P1: <span id="p1-coins">0</span></div>
+            <div style="color:#33691e">🪙 P2: <span id="p2-coins">0</span></div>
+        </div>
+    </div>
+
+    <!-- SPINNER MODAL -->
+    <div id="wheel-modal" class="modal">
+        <div class="modal-content">
+            <div style="position:relative">
+                <div class="pointer-arrow"></div>
+                <div class="spinner-container">
+                    <img src="spinner.jpg" id="spinner-img">
+                </div>
+            </div>
+            <br>
+            <button onclick="spinWheel()" id="spin-btn" style="z-index:105; position: relative;">SPIN!</button>
+        </div>
+    </div>
+
+    <!-- BOY IMAGE -->
+    <img src="boy.jpg" id="boy-popup">
+
+    <script>
+        // --- 1. COORDINATE MAPPING ---
+        const tileCoords = [
+            { t: 12, l: 20 }, { t: 24, l: 20 }, { t: 36, l: 20 }, { t: 49, l: 20 }, 
+            { t: 61, l: 20 }, { t: 74, l: 20 }, { t: 86, l: 20 }, 
+            { t: 86, l: 70 }, { t: 74, l: 70 }, { t: 61, l: 70 }, { t: 49, l: 70 }, 
+            { t: 36, l: 70 }, { t: 24, l: 70 }, { t: 12, l: 70 }
+        ];
+
+        const boardData = [
+            { type: "start" }, { type: "boost" }, { type: "peace" }, { type: "slide_down" }, 
+            { type: "roll_again" }, { type: "none" }, { type: "death" }, 
+            { type: "question" }, { type: "coin" }, { type: "roll_again" }, { type: "slide_back" }, 
+            { type: "hazard" }, { type: "none" }, { type: "finish" }
+        ];
+
+        let p1Pos = 0, p2Pos = 0, p1Coins = 0, p2Coins = 0;
+        let currentTurn = 1, isGameOver = false;
+        let chestPos = -1, sharkPos = -1;
+
+        // --- INIT ---
+        function initGame() {
+            let safeTiles = [1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12];
+            chestPos = safeTiles.splice(Math.floor(Math.random() * safeTiles.length), 1)[0];
+            sharkPos = safeTiles.splice(Math.floor(Math.random() * safeTiles.length), 1)[0];
+            updateVisuals();
+        }
+
+        // --- GAMEPLAY ---
+        function rollDice() {
+            if(isGameOver) return confirm("Restart?") ? location.reload() : null;
+            document.getElementById('roll-btn').disabled = true;
+            document.getElementById('dice-box').innerText = "🔄";
+            
+            setTimeout(() => {
+                let roll = Math.floor(Math.random() * 6) + 1;
+                document.getElementById('dice-box').innerText = roll;
+                movePlayer(roll);
+            }, 600);
+        }
+
+        function movePlayer(steps) {
+            let cur = (currentTurn === 1) ? p1Pos : p2Pos;
+            
+            // EXACT ROLL RULE
+            // The Finish is at Index 13.
+            if (cur + steps > 13) {
+                document.getElementById('message-log').innerHTML = 
+                    "You need an exact roll to finish!<br>Stay where you are.";
+                
+                // Don't move visually
+                setTimeout(() => {
+                    toggleTurn(); // Skip straight to next player
+                }, 1500);
+                return;
+            }
+
+            let next = cur + steps;
+            
+            if (currentTurn === 1) p1Pos = next; else p2Pos = next;
+            updateVisuals();
+            setTimeout(handleLandEvent, 700);
+        }
+
+        function handleLandEvent() {
+            let pos = (currentTurn === 1) ? p1Pos : p2Pos;
+            let tile = boardData[pos];
+            let msg = "";
+            let endTurn = true;
+
+            // Catch Rule
+            if (p2Pos === p1Pos && p2Pos > 0) {
+                endGame("☠️ SUFFOCATION!<br>P2 WINS!"); return;
+            }
+            // Finish Rule
+            if (pos === 13) {
+                endGame(currentTurn === 1 ? "🏆 Criminal Escaped!<br>P1 WINS!" : "🏆 Fart Finished!<br>P2 WINS!"); return;
+            }
+
+            // Items
+            if (pos === chestPos) { msg += "💎 CHEST FOUND! (+1 Coin)<br>"; addCoin(1); }
+            if (pos === sharkPos) { msg += "🦈 SHARK BITE! (-1 Coin)<br>"; addCoin(-1); }
+
+            // Logic
+            if (tile.type === 'peace') {
+                document.getElementById('wheel-modal').style.display = 'flex';
+                document.getElementById('spinner-img').style.transform = "rotate(0deg)";
+                document.getElementById('spin-btn').disabled = false;
+                return; 
+            }
+            else if (tile.type === 'death') { msg += "😱 YOU DIED! Reset!"; teleportPlayer(0); }
+            else if (tile.type === 'slide_down') { msg += "Speed Slope! +1"; shiftPlayer(1); }
+            else if (tile.type === 'slide_back') { msg += "Slippery! -1"; shiftPlayer(-1); }
+            else if (tile.type === 'boost') { msg += "Speed Up! +1"; shiftPlayer(1); }
+            else if (tile.type === 'roll_again') { msg += "Roll Again!"; endTurn = false; }
+            else if (tile.type === 'coin') { msg += "Pizza! +1 Coin"; addCoin(1); }
+            else if (tile.type === 'question') {
+                if (prompt("Riddle: What game is this? (Hint: Fart)")?.toLowerCase().includes("fart")) {
+                    msg += "Correct! +1 Coin"; addCoin(1);
+                } else {
+                    msg += "Wrong! Back 1"; shiftPlayer(-1);
+                }
+            }
+            else if (tile.type === 'hazard') {
+                let c = (currentTurn===1)?p1Coins:p2Coins;
+                if(c>0){ msg+="Paid Ghost. Safe."; addCoin(-1); }
+                else{ msg+="Scared by Ghost! Back 2"; shiftPlayer(-2); }
+            }
+            else { msg += "Safe."; }
+
+            document.getElementById('message-log').innerHTML = msg;
+            
+            setTimeout(() => {
+                if (p2Pos === p1Pos && p2Pos > 0) { endGame("☠️ SUFFOCATION!<br>P2 WINS!"); return; }
+                if (endTurn) toggleTurn(); else document.getElementById('roll-btn').disabled = false;
+            }, 1000);
+        }
+
+        // --- SPINNER LOGIC ---
+        function spinWheel() {
+            let btn = document.getElementById('spin-btn');
+            let img = document.getElementById('spinner-img');
+            btn.disabled = true;
+
+            // Spin animation
+            let deg = 1080 + Math.floor(Math.random() * 360);
+            img.style.transform = `rotate(${deg}deg)`;
+
+            // Wait 3s (spin) + 2s (pause to read) = 5s total
+            setTimeout(() => {
+                showBoyPopup();
+            }, 5000); 
+        }
+
+        function showBoyPopup() {
+            document.getElementById('wheel-modal').style.display = 'none';
+            
+            let boy = document.getElementById('boy-popup');
+            boy.style.display = 'block';
+            setTimeout(() => { boy.classList.add('show'); }, 50);
+
+            addCoin(3);
+            document.getElementById('message-log').innerHTML = "PEACE ACHIEVED! <br>Boy says: 'I'm on it!'<br>+3 Coins!";
+
+            // Boy stays for 5 seconds now
+            setTimeout(() => {
+                boy.classList.remove('show');
+                setTimeout(() => { boy.style.display = 'none'; }, 500); 
+                toggleTurn();
+            }, 5000);
+        }
+
+        // --- HELPERS ---
+        function updateVisuals() {
+            let c1 = tileCoords[p1Pos], c2 = tileCoords[p2Pos];
+            document.getElementById('p1-token').style.top = c1.t + "%";
+            document.getElementById('p1-token').style.left = (c1.l - 5) + "%";
+            document.getElementById('p2-token').style.top = c2.t + "%";
+            document.getElementById('p2-token').style.left = (c2.l + 5) + "%";
+            
+            if(chestPos>-1) {
+                let cc = tileCoords[chestPos];
+                let cel = document.getElementById('chest-token');
+                cel.style.display='block'; cel.style.top=(cc.t-2)+"%"; cel.style.left=cc.l+"%";
+            }
+            if(sharkPos>-1) {
+                let sc = tileCoords[sharkPos];
+                let sel = document.getElementById('shark-token');
+                sel.style.display='block'; sel.style.top=(sc.t+2)+"%"; sel.style.left=(sc.l-2)+"%";
+            }
+        }
+
+        function toggleTurn() {
+            currentTurn = (currentTurn===1)?2:1;
+            let el = document.getElementById('turn-indicator');
+            el.className = (currentTurn===1)?"bg-p1":"bg-p2";
+            el.innerText = (currentTurn===1)?"Player 1: Criminal":"Player 2: Fart";
+            document.getElementById('roll-btn').disabled = false;
+        }
+
+        function addCoin(n) {
+            if(currentTurn===1) p1Coins = Math.max(0, p1Coins+n);
+            else p2Coins = Math.max(0, p2Coins+n);
+            document.getElementById('p1-coins').innerText = p1Coins;
+            document.getElementById('p2-coins').innerText = p2Coins;
+        }
+
+        function shiftPlayer(n) {
+            // Check bounds (0 to 13)
+            if(currentTurn===1) p1Pos=Math.max(0, Math.min(13, p1Pos+n));
+            else p2Pos=Math.max(0, Math.min(13, p2Pos+n));
+            updateVisuals();
+        }
+
+        function teleportPlayer(n) {
+            if(currentTurn===1) p1Pos=n; else p2Pos=n;
+            updateVisuals();
+        }
+
+        function endGame(msg) {
+            isGameOver=true;
+            document.getElementById('message-log').innerHTML = msg;
+        }
+        
+        function getClickCoordinates(event) {
+            const rect = event.target.getBoundingClientRect();
+            alert(`{ t: ${Math.round(((event.clientY-rect.top)/rect.height)*100)}, l: ${Math.round(((event.clientX-rect.left)/rect.width)*100)} }`);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
